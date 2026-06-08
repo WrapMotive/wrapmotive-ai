@@ -145,9 +145,11 @@ Premium Vehicle: {'YES' if premium else 'No'}"""
         
         return jsonify({"status": "success"}), 200
         
-    except Exception as e:
-        print(f"Error: {e}")
-        return jsonify({"status": "error", "message": str(e)}), 500
+except Exception as e:
+        import traceback
+        error_details = traceback.format_exc()
+        print(f"FULL ERROR: {error_details}")
+        return jsonify({"status": "error", "message": str(e), "details": error_details}), 500
 
 @app.route('/', methods=['GET'])
 def home():
