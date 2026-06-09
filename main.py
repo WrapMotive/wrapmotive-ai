@@ -128,10 +128,5 @@ def webhook():
 
         send_sms(clean_phone, ai_message)
 
-        team_notification = f"""NEW WRAPMOTIVE LEAD
-Name: {name}
-Phone: {phone}
-Vehicle: {vehicle}
-Service: {service}
-Details: {details}
-Premium Vehicle: {'YES' if premium else
+        premium_label = "YES" if premium else "No"
+        team_notification = f"NEW WRAPMOTIVE LEAD\nName: {name}\nPhone: {phone}\nVehicle: {vehicle}\nService: {service}\nDetails: {details}\nPremium Vehicle: {premium_label}"
