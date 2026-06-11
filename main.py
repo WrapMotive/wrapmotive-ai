@@ -1,14 +1,13 @@
 from flask import Flask, request, jsonify
-from twilio.rest import Client
 import anthropic
 import os
 import traceback
+import requests
 
 app = Flask(__name__)
 
-TWILIO_SID = os.environ.get("TWILIO_SID")
-TWILIO_TOKEN = os.environ.get("TWILIO_TOKEN")
-TWILIO_NUMBER = os.environ.get("TWILIO_NUMBER")
+QUO_API_KEY = os.environ.get("QUO_API_KEY")
+QUO_PHONE_NUMBER = os.environ.get("QUO_PHONE_NUMBER")
 ANTHROPIC_KEY = os.environ.get("ANTHROPIC_KEY")
 TEAM_NUMBERS = os.environ.get("TEAM_NUMBERS", "").split(",")
 
@@ -27,8 +26,19 @@ def is_premium_vehicle(year, make):
 
 
 def send_sms(to_number, message):
-    client = Client(TWILIO_SID, TWILIO_TOKEN)
-    client.messages.create(body=message, from_=TWILIO_NUMBER, to=to_number)
+    url = "https://api.openphone.com/v1/messages"
+    headers = {
+        "Authorization": QUO_API_KEY,
+        "Content-Type": "application/json"
+    }
+    payload = {
+        "content": message,
+        "from": QUO_PHONE_NUMBER,
+        "to": [to_number]
+    }
+    response = requests.post(url, json=payload, headers=headers)
+    print("Quo SMS response: " + str(response.status_code) + " " + str(response.text))
+    return response
 
 
 def notify_team(message):
@@ -43,7 +53,7 @@ def get_ai_response(customer_data, is_premium, service):
 
     system_prompt = """You are Shawn from WrapMotive, a premium auto wrap and tint shop.
 You text customers directly as Shawn. You are knowledgeable, casual but professional.
-Never say you are an AI. Sign off as Shawn from WrapMotive.
+Never say you are an AI. Never use emojis.
 
 PRICING KNOWLEDGE:
 CARBON TINT:
@@ -62,13 +72,14 @@ CERAMIC TINT:
 SALES RULES:
 - For premium vehicles (2019+ or luxury brand): Always ask if they want carbon or ceramic, explain the difference if needed. Ceramic is higher quality, better heat rejection, clearer vision, lasts longer.
 - For older or standard vehicles: Give pricing for both carbon and ceramic straight up, let them choose.
-- NEVER oversell.
+- NEVER oversell. Accept every job.
+- Always try to upsell ceramic coating add-on when relevant.
 - For wraps, PPF, chrome delete, ceramic coating, detailing, body kits: Warm up the lead, ask questions about their vision, get them excited. DO NOT give final pricing - tell them you will put together a custom quote.
 - Always greet with just the first name: Hey [first name], its Shawn from WrapMotive!
 - No emojis ever.
 - Be warm, genuine and passionate. You love cars and you love what you do. That energy should come through naturally without being fake or salesy.
-- You can say things like "that's a perfect choice" or "honestly that's going to look insane on your car" but only when it genuinely fits.
-- Never say generic filler like "great car by the way" — instead reference the actual vehicle specifically when you compliment it.
+- You can say things like "that's a perfect choice" or "honestly that's going to look incredible" but only when it genuinely fits.
+- Never say generic filler like "great car by the way" - instead reference the actual vehicle specifically when it makes sense.
 - Short texts, natural flow, like you're texting a friend who just asked about your specialty.
 - Leave them feeling like they just connected with someone who actually cares about their car."""
 
