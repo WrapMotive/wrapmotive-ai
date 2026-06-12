@@ -160,17 +160,17 @@ def webhook():
         data = request.form.to_dict() if request.form else request.json or {}
         print("Received lead: " + str(data))
 
-        name = data.get("q3_fullName", {})
-        if isinstance(name, dict):
-            name = (name.get("first", "") + " " + name.get("last", "")).strip()
+       name = data.get("q2_q2_fullname0", {})
+if isinstance(name, dict):
+    name = (name.get("first", "") + " " + name.get("last", "")).strip()
 
-        phone = data.get("q4_phoneNumber", {})
-        if isinstance(phone, dict):
-            phone = phone.get("full", "")
+phone = data.get("q3_q3_phone1", {})
+if isinstance(phone, dict):
+    phone = phone.get("full", "")
 
-        email = data.get("q5_email", "")
-        vehicle = data.get("q6_vehicleYear", "")
-        service = data.get("q7_servicesNeeded", "")
+email = data.get("q4_q4_email2", "")
+vehicle = data.get("q5_q5_textbox3", "")
+service = data.get("q9_servicesNeeded", "")
         if isinstance(service, list):
             service = ", ".join(service)
         details = data.get("q8_projectDetails", "")
