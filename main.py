@@ -167,6 +167,12 @@ def webhook():
 
         email = data.get("q4_q4_email2", "")
         vehicle = data.get("q5_q5_textbox3", "")
+if not vehicle:
+    try:
+        raw = json.loads(data.get("rawRequest", "{}"))
+        vehicle = raw.get("q5_q5_textbox3", "")
+    except Exception:
+        pass
         service = data.get("q9_servicesNeeded", "")
         if isinstance(service, list):
             service = ", ".join(service)
