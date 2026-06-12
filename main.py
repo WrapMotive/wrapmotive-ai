@@ -80,6 +80,32 @@ def send_delayed_sms(to_number, message, delay_seconds):
     send_sms(to_number, message)
 
 
+def parse_form_data(data):
+    try:
+        raw = json.loads(data.get("rawRequest", "{}"))
+    except Exception:
+        raw = {}
+
+    name = raw.get("q2_q2_fullname0", data.get("q2_q2_fullname0", {}))
+    if isinstance(name, dict):
+        name = (name.get("first", "") + " " + name.get("last", "")).strip()
+
+    phone = raw.get("q3_q3_phone1", data.get("q3_q3_phone1", {}))
+    if isinstance(phone, dict):
+        phone = phone.get("full", "")
+
+    email = raw.get("q4_q4_email2", data.get("q4_q4_email2", ""))
+    vehicle = raw.get("q5_q5_textbox3", data.get("q5_q5_textbox3", ""))
+
+    service = raw.get("q9_servicesNeeded", data.get("q9_servicesNeeded", ""))
+    if isinstance(service, list):
+        service = ", ".join(service)
+
+    details = raw.get("q10_message", data.get("q10_message", ""))
+
+    return name, phone, email, vehicle, service, details
+
+
 def get_ai_response(customer_data, is_premium, service):
     client = anthropic.Anthropic(api_key=ANTHROPIC_KEY)
     high_ticket = is_high_ticket(service)
@@ -157,26 +183,8 @@ def webhook():
         data = request.form.to_dict() if request.form else request.json or {}
         print("Received lead: " + str(data))
 
-        name = data.get("q2_q2_fullname0", {})
-        if isinstance(name, dict):
-            name = (name.get("first", "") + " " + name.get("last", "")).strip()
-
-        phone = data.get("q3_q3_phone1", {})
-        if isinstance(phone, dict):
-            phone = phone.get("full", "")
-
-        email = data.get("q4_q4_email2", "")
-        vehicle = data.get("q5_q5_textbox3", "")
-if not vehicle:
-    try:
-        raw = json.loads(data.get("rawRequest", "{}"))
-        vehicle = raw.get("q5_q5_textbox3", "")
-    except Exception:
-        pass
-        service = data.get("q9_servicesNeeded", "")
-        if isinstance(service, list):
-            service = ", ".join(service)
-        details = data.get("q10_message", "")
+        name, phone, email, vehicle, service, details = parse_form_data(data)
+        print("Parsed - Name: " + str(name) + " Phone: " + str(phone) + " Vehicle: " + str(vehicle) + " Service: " + str(service))
 
         vehicle_parts = vehicle.split(" ") if vehicle else []
         year = vehicle_parts[0] if vehicle_parts else "0"
@@ -230,7 +238,6 @@ if not vehicle:
         )
 
         send_sms(OWNER_NUMBER, approval_msg)
-
         return jsonify({"status": "success"}), 200
 
     except Exception as e:
@@ -346,7 +353,7 @@ def human_reply():
 
         user_id = body.get("userId", None)
         if not user_id:
-            print("No userId - this was sent by AI, ignoring")
+            print("No userId - sent by AI, ignoring")
             return jsonify({"status": "ai message ignored"}), 200
 
         to_number = body.get("to", "")
@@ -367,7 +374,6 @@ def human_reply():
 
         save_state(state)
         print("Human active flagged for: " + clean_to)
-
         return jsonify({"status": "flagged"}), 200
 
     except Exception as e:
