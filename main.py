@@ -133,7 +133,7 @@ TINT SALES RULES:
 - Never oversell. Accept every job.
 - Naturally mention ceramic coating add-on when it fits.
 
-HIGH TICKET RULES (wraps, PPF, chrome delete, ceramic coating, detailing, body kits):
+HIGH TICKET RULES (wraps, PPF, chrome delete, ceramic coating, detailing,  kits):
 - NEVER give pricing. Tell them you will put together a custom quote.
 - Ask about their vision, current color, timeline. Get them excited.
 - Be genuinely passionate. These are the jobs you love most.
@@ -252,12 +252,12 @@ def approve():
         data = request.json or {}
         print("Approve webhook received: " + str(data))
 
-        body = data.get("body", {})
-        if not body:
-            body = data
+      body = data.get("object", {}).get("data", {}).get("object", {})
+if not body:
+    body = data
 
-        from_number = body.get("from", "")
-        message_text = str(body.get("text", "")).strip()
+from_number = body.get("from", "")
+message_text = str(body.get("body", "")).strip()
 
         clean_from = "".join(filter(str.isdigit, str(from_number)))
         if len(clean_from) == 10:
