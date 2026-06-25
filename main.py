@@ -253,11 +253,11 @@ def approve():
         print("Approve webhook received: " + str(data))
 
       body = data.get("object", {}).get("data", {}).get("object", {})
-if not body:
-    body = data
+        if not body:
+            body = data
 
-from_number = body.get("from", "")
-message_text = str(body.get("body", "")).strip()
+        from_number = body.get("from", "")
+        message_text = str(body.get("body", "")).strip()
 
         clean_from = "".join(filter(str.isdigit, str(from_number)))
         if len(clean_from) == 10:
