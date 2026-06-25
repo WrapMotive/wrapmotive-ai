@@ -225,7 +225,7 @@ VOICE RULES:
 - Drop to new line, ask first qualifying question.
 - No emojis ever.
 - Warm, genuine, passionate. Short natural texts like a real person.
-- No generic hype lines. No "that's a serious combo" or "awesome choice."
+- No generic hype lines. No "that is a serious combo" or "awesome choice."
 - Reference the actual vehicle specifically by year make model.
 - Keep responses short — 2-4 sentences max per text."""
 
@@ -308,7 +308,8 @@ def webhook():
             "Service: " + str(service) + "\n"
             "Type: " + high_ticket_label + "\n\n"
             "AI Message:\n" + ai_message + "\n\n"
-            "F = you take over | Y = AI continues"
+            "F = you take over | Y = AI continues\n"
+            "To correct: reply with phone number on line 1, corrected message on line 2"
         )
 
         r.set("pending:" + clean_phone, json.dumps({
@@ -449,7 +450,8 @@ def customer_reply():
                 "Vehicle: " + str(lead.get("vehicle", "")) + "\n\n"
                 "Customer: " + message_text + "\n\n"
                 "AI wants to send:\n" + ai_response + "\n\n"
-                "Y = send | F = you take over"
+                "Y = send | F = you take over\n"
+                "To correct: reply with phone number on line 1, corrected message on line 2"
             )
             r.set("pending:" + clean_from, json.dumps({
                 "customer_name": lead.get("name", ""),
@@ -501,6 +503,10 @@ def human_reply():
             to_number = to_number[0] if to_number else ""
 
         clean_to = clean_number(to_number)
+
+        if clean_to in get_team_numbers():
+            print("Message to team member - not flagging human active")
+            return jsonify({"status": "team notification ignored"}), 200
 
         r.set("human_active:" + clean_to, "1", ex=86400 * 7)
         r.delete("pending:" + clean_to)
