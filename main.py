@@ -438,8 +438,18 @@ def customer_reply():
         elif len(clean_owner) == 11:
             clean_owner = "+" + clean_owner
 
-        if clean_from == clean_owner:
-            return jsonify({"status": "owner message"}), 200
+        team_numbers = []
+for num in [OWNER_NUMBER, TEAM_NUMBER_1, TEAM_NUMBER_2]:
+    if num:
+        clean = "".join(filter(str.isdigit, str(num)))
+        if len(clean) == 10:
+            clean = "+1" + clean
+        elif len(clean) == 11:
+            clean = "+" + clean
+        team_numbers.append(clean)
+
+if clean_from in team_numbers:
+    return jsonify({"status": "team message"}), 200
 
         if r.get("human_active:" + clean_from):
             print("Human active for " + clean_from + " - AI not responding")
