@@ -229,10 +229,15 @@ VOICE RULES:
 - Reference the actual vehicle specifically by year make model.
 - Keep responses short — 2-4 sentences max per text."""
 
+   if history and history[-1]["role"] == "assistant":
+        history.append({"role": "user", "content": "Continue the conversation."})
+
     if customer_message:
         history.append({"role": "user", "content": customer_message})
 
     messages = history if history else [{"role": "user", "content": (
+
+messages = history if history else [{"role": "user", "content": (
         "New lead just submitted a quote form.\n"
         "Name: " + str(name) + "\n"
         "Vehicle: " + str(vehicle) + "\n"
