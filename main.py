@@ -31,6 +31,23 @@ HIGH_TICKET_SERVICES = ["wrap", "ppf", "paint protection", "chrome delete", "cer
                         "detailing", "detail", "body kit", "full wrap", "partial wrap"]
 
 
+def clean_number(number):
+    clean = "".join(filter(str.isdigit, str(number)))
+    if len(clean) == 10:
+        clean = "+1" + clean
+    elif len(clean) == 11:
+        clean = "+" + clean
+    return clean
+
+
+def get_team_numbers():
+    numbers = []
+    for num in [OWNER_NUMBER, TEAM_NUMBER_1, TEAM_NUMBER_2]:
+        if num:
+            numbers.append(clean_number(num))
+    return numbers
+
+
 def is_premium_vehicle(year, make):
     try:
         vehicle_year = int(year)
@@ -81,7 +98,7 @@ def send_team_notification(name, phone, vehicle, service, details):
     for number in [TEAM_NUMBER_1, TEAM_NUMBER_2]:
         if number:
             try:
-                send_sms(number, team_msg)
+                send_sms(clean_number(number), team_msg)
             except Exception as e:
                 print("Team notification error: " + str(e))
 
@@ -185,14 +202,14 @@ TINT CONVERSATION RULES:
 - Never oversell. Accept every job including per window jobs.
 
 HIGH TICKET RULES (wraps, PPF, chrome delete, ceramic coating):
-- NEVER give specific pricing unless ceramic coating ranges below.
-- Wraps: Ask current color of vehicle first, then get their vision. If they ask about brands mention we use highly reputable brands including 3M, KPMF, Avery Dennison, Orafal, Inozetek and Teckwrap depending on the color choice they want.
+- NEVER give specific pricing except ceramic coating ranges below.
+- Wraps: Ask current color of vehicle first, then get their vision. If they ask about brands say we use highly reputable brands and if they press name: 3M, KPMF, Avery Dennison, Orafal, Inozetek and Teckwrap depending on the color choice they want.
 - PPF: Ask what they want to protect. Always mention we use STEK PPF which comes with a 10-year manufacturer warranty against yellowing and deterioration. This is a key selling point.
-- Chrome delete: Ask exactly what chrome pieces need to be deleted before quoting.
-- Ceramic coating: ALWAYS push paint correction first. Frame it as essential not optional. Tell them to come in so you can assess paint condition.
+- Chrome delete: Ask exactly what chrome pieces need to be deleted before anything else.
+- Ceramic coating: ALWAYS push paint correction first. Frame it as essential not optional. Tell them to come in so you can assess paint condition. Never mention brand unless asked.
 - Detailing: Only mention as add-on to another service, never standalone.
 - Body kits: Ignore completely, redirect to wrap conversation.
-- Never close on price for high ticket — warm them up, get the vision, then let Shawn close.
+- Never close on price for high ticket — warm them up, get the vision, then flag for Shawn to close.
 
 CERAMIC COATING PRICING (ranges only):
 - Ceramic coating alone: $500
@@ -263,11 +280,7 @@ def webhook():
         premium = is_premium_vehicle(year, make)
         high_ticket = is_high_ticket(service)
 
-        clean_phone = "".join(filter(str.isdigit, str(phone)))
-        if len(clean_phone) == 10:
-            clean_phone = "+1" + clean_phone
-        elif len(clean_phone) == 11:
-            clean_phone = "+" + clean_phone
+        clean_phone = clean_number(phone)
 
         lead_data = {
             "name": name,
@@ -308,7 +321,7 @@ def webhook():
             "timestamp": time.time()
         }), ex=86400)
 
-        send_sms(OWNER_NUMBER, approval_msg)
+        send_sms(clean_number(OWNER_NUMBER), approval_msg)
         send_team_notification(name, clean_phone, vehicle, service, details)
         return jsonify({"status": "success"}), 200
 
@@ -331,17 +344,8 @@ def approve():
         from_number = body.get("from", "")
         message_text = str(body.get("body", "")).strip()
 
-        clean_from = "".join(filter(str.isdigit, str(from_number)))
-        if len(clean_from) == 10:
-            clean_from = "+1" + clean_from
-        elif len(clean_from) == 11:
-            clean_from = "+" + clean_from
-
-        clean_owner = "".join(filter(str.isdigit, str(OWNER_NUMBER)))
-        if len(clean_owner) == 10:
-            clean_owner = "+1" + clean_owner
-        elif len(clean_owner) == 11:
-            clean_owner = "+" + clean_owner
+        clean_from = clean_number(from_number)
+        clean_owner = clean_number(OWNER_NUMBER)
 
         if clean_from != clean_owner:
             print("Not from owner - from: " + clean_from + " owner: " + clean_owner)
@@ -350,13 +354,12 @@ def approve():
         if message_text.upper() in ["Y", "F"]:
             all_pending_keys = r.keys("pending:*")
             if not all_pending_keys:
-                send_sms(OWNER_NUMBER, "No pending approvals found.")
+                send_sms(clean_owner, "No pending approvals found.")
                 return jsonify({"status": "no pending"}), 200
 
             latest_key = max(all_pending_keys, key=lambda k: json.loads(r.get(k)).get("timestamp", 0))
             pending = json.loads(r.get(latest_key))
             delay = random.randint(45, 90)
-
             is_f = message_text.upper() == "F"
 
             thread = threading.Thread(
@@ -368,9 +371,9 @@ def approve():
 
             if is_f:
                 r.set("human_active:" + pending["customer_phone"], "1", ex=86400 * 7)
-                send_sms(OWNER_NUMBER, "Intro sending to " + str(pending["customer_name"]) + " in ~" + str(delay) + " seconds. You have the conversation.")
+                send_sms(clean_owner, "Intro sending to " + str(pending["customer_name"]) + " in ~" + str(delay) + " seconds. You have the conversation.")
             else:
-                send_sms(OWNER_NUMBER, "Sending to " + str(pending["customer_name"]) + " in ~" + str(delay) + " seconds. AI is handling.")
+                send_sms(clean_owner, "Sending to " + str(pending["customer_name"]) + " in ~" + str(delay) + " seconds. AI is handling.")
 
             r.delete(latest_key)
             return jsonify({"status": "sent"}), 200
@@ -379,12 +382,7 @@ def approve():
         if len(lines) >= 2:
             target_phone = lines[0].strip()
             corrected_message = "\n".join(lines[1:]).strip()
-
-            clean_target = "".join(filter(str.isdigit, target_phone))
-            if len(clean_target) == 10:
-                clean_target = "+1" + clean_target
-            elif len(clean_target) == 11:
-                clean_target = "+" + clean_target
+            clean_target = clean_number(target_phone)
 
             pending_raw = r.get("pending:" + clean_target)
             if pending_raw:
@@ -399,7 +397,7 @@ def approve():
                 thread.start()
 
                 r.delete("pending:" + clean_target)
-                send_sms(OWNER_NUMBER, "Corrected message sending to " + str(pending["customer_name"]) + " in ~" + str(delay) + " seconds.")
+                send_sms(clean_owner, "Corrected message sending to " + str(pending["customer_name"]) + " in ~" + str(delay) + " seconds.")
                 return jsonify({"status": "corrected and sent"}), 200
 
         return jsonify({"status": "unrecognized"}), 200
@@ -426,30 +424,10 @@ def customer_reply():
         if direction != "incoming":
             return jsonify({"status": "not incoming"}), 200
 
-        clean_from = "".join(filter(str.isdigit, str(from_number)))
-        if len(clean_from) == 10:
-            clean_from = "+1" + clean_from
-        elif len(clean_from) == 11:
-            clean_from = "+" + clean_from
+        clean_from = clean_number(from_number)
 
-        clean_owner = "".join(filter(str.isdigit, str(OWNER_NUMBER)))
-        if len(clean_owner) == 10:
-            clean_owner = "+1" + clean_owner
-        elif len(clean_owner) == 11:
-            clean_owner = "+" + clean_owner
-
-        team_numbers = []
-for num in [OWNER_NUMBER, TEAM_NUMBER_1, TEAM_NUMBER_2]:
-    if num:
-        clean = "".join(filter(str.isdigit, str(num)))
-        if len(clean) == 10:
-            clean = "+1" + clean
-        elif len(clean) == 11:
-            clean = "+" + clean
-        team_numbers.append(clean)
-
-if clean_from in team_numbers:
-    return jsonify({"status": "team message"}), 200
+        if clean_from in get_team_numbers():
+            return jsonify({"status": "team message"}), 200
 
         if r.get("human_active:" + clean_from):
             print("Human active for " + clean_from + " - AI not responding")
@@ -482,7 +460,7 @@ if clean_from in team_numbers:
                 "high_ticket": True,
                 "timestamp": time.time()
             }), ex=86400)
-            send_sms(OWNER_NUMBER, approval_msg)
+            send_sms(clean_number(OWNER_NUMBER), approval_msg)
         else:
             delay = random.randint(20, 45)
             thread = threading.Thread(
@@ -522,11 +500,7 @@ def human_reply():
         if isinstance(to_number, list):
             to_number = to_number[0] if to_number else ""
 
-        clean_to = "".join(filter(str.isdigit, str(to_number)))
-        if len(clean_to) == 10:
-            clean_to = "+1" + clean_to
-        elif len(clean_to) == 11:
-            clean_to = "+" + clean_to
+        clean_to = clean_number(to_number)
 
         r.set("human_active:" + clean_to, "1", ex=86400 * 7)
         r.delete("pending:" + clean_to)
