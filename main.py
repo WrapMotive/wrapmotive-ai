@@ -252,7 +252,7 @@ def approve():
         data = request.json or {}
         print("Approve webhook received: " + str(data))
 
-        body = data.get("object", {}).get("data", {}).get("object", {})
+        body = data.get("data", {}).get("object", {})
         if not body:
             body = data
 
