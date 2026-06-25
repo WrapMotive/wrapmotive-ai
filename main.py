@@ -75,6 +75,10 @@ def send_sms(to_number, message):
     }
     response = requests.post(url, json=payload, headers=headers)
     print("Quo SMS response: " + str(response.status_code) + " " + str(response.text))
+    resp_data = response.json()
+    msg_id = resp_data.get("data", {}).get("id", "")
+    if msg_id:
+        r.set("ai_msg:" + msg_id, "1", ex=3600)
     return response
 
 
@@ -496,9 +500,9 @@ def human_reply():
         if "delivered" not in str(event_type) and "sent" not in str(event_type):
             return jsonify({"status": "not a sent message"}), 200
 
-        user_id = body.get("userId", None)
-        if not user_id:
-            print("No userId - sent by AI, ignoring")
+        msg_id = body.get("id", "")
+        if r.get("ai_msg:" + msg_id):
+            print("AI message detected - not flagging human active")
             return jsonify({"status": "ai message ignored"}), 200
 
         to_number = body.get("to", "")
